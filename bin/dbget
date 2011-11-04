@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+
+DBGET_LIB_PATH = File.join(File.dirname(__FILE__), '../lib')
+require File.join(DBGET_LIB_PATH, 'dbget')
+
+DBGet::Runner.new(ARGV, 'mysql')
