@@ -39,8 +39,6 @@ module DBGet
 
       get_db_from_server(db_config)
 
-      print_header if @verbose
-
       if @header[:status] == 'SUCCESS'
         puts "Dumping #{@db} to #{@dbtype} using connection: "
         puts "  host: #{@host}"
@@ -154,6 +152,8 @@ module DBGet
         s = s.split(': ')
         @header[s.first.to_sym] = s.last.chomp
       end
+
+      print_header if @verbose
 
       if @header[:status] != "SUCCESS"
         raise "Server returned #{@header[:status]}!"
