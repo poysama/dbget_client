@@ -17,6 +17,7 @@ module DBGet
                          :key => @options[:key],
                          :dbtype => @options[:dbtype],
                          :server => @options[:server],
+                         :opt_db_name => @options[:opt_db_name],
                          :verbose => @options[:verbose] }
 
         db_dump = DBGet::DBDump.new(dump_options)

@@ -35,6 +35,11 @@ module DBGet
           options[:verbose] = true
         end
 
+        opts.on('-V', '--version', 'Version') do
+          puts DBGet::VERSION
+          exit
+        end
+
         opts.on('-h', '--help', 'Display this screen') do
           puts opts
           exit

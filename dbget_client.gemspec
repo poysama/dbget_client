@@ -1,10 +1,10 @@
 # -*- encoding: utf-8 -*-
 $:.push File.expand_path("../lib", __FILE__)
-VERSION = '0.1.0'
+require 'dbget/version'
 
 Gem::Specification.new do |s|
   s.name        = "dbget_client"
-  s.version     = VERSION
+  s.version     = DBGet::VERSION
   s.authors     = ["Jan Mendoza"]
   s.email       = ["poymode@gmail.com"]
   s.homepage    = "https://github.com/poymode/dbget_client"

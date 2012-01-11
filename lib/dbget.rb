@@ -2,6 +2,7 @@ require 'fileutils'
 require 'yaml'
 require 'zlib'
 require 'optparse'
+require File.join(File.dirname(__FILE__), 'dbget/version')
 
 module DBGet
   MYSQL_CMD = `which mysql`.strip

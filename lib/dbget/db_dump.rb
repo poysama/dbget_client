@@ -22,13 +22,14 @@ module DBGet
       @key = attributes[:key]
       @dbtype = attributes[:dbtype] || 'mysql'
       @server = attributes[:server]
+      @opt_db_name = attributes[:opt_db_name]
       @verbose = attributes[:verbose]
       @header = {}
     end
 
     def load!(db_config)
       @server ||= db_config['source']['server']
-      @database = db_config['mapping'][@db][@dbtype]
+      @database = @opt_db_name || db_config['mapping'][@db][@dbtype]
       @host = db_config['target'][@dbtype]['host']
       @port = db_config['target'][@dbtype]['port']
       @username = db_config['target'][@dbtype]['username']
