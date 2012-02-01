@@ -1,5 +1,7 @@
 module DBGet
   class Initializer
+    include Constants
+
     def self.boot(options)
       self.new(options).init
     end
@@ -11,16 +13,17 @@ module DBGet
     def init
       load_dbget_config
 
-      @options[:databases].each do |d|
-        dump_options = { :db => d,
-                         :date => @options[:date],
-                         :key => @options[:key],
-                         :dbtype => @options[:dbtype],
-                         :server => @options[:server],
-                         :opt_db_name => @options[:opt_db_name],
-                         :verbose => @options[:verbose] }
+      # lets turn off opt_db_name if we have more arguments
+      # this feature is not supported at the moment
+      if @options[:databases].count > 1 and @options.include?(:opt_db_name)
+        raise "You cannot use -n with multiple databases!"
+      end
 
-        db_dump = DBGet::DBDump.new(dump_options)
+      @options[:databases].each do |d|
+        @options[:db] = d
+
+        db_dump = DBGet::DBDump.new(@options)
+
         load_db_dumps(db_dump)
       end
     end
@@ -28,15 +31,22 @@ module DBGet
     protected
 
     def load_dbget_config
-      config_path = File.join(@options[:dbget_path], 'dbget.yml')
+      config_path = File.join(@options[:dbget_path], DBGET_CONFIG_FILE)
 
-      raise "Cannot find #{config_path}!" unless File.exists?(config_path)
-
-      @dbget_config = YAML.load_file(config_path)
+      if File.exists?(config_path)
+        @dbget_config = YAML.load_file(config_path)
+      else
+        raise "Cannot find #{config_path}!"
+      end
     end
 
     def load_db_dumps(db_dump)
-      config_loader = DBGet::ConfigLoader.new(@dbget_config, @options)
+      if !@dbget_config.empty?
+        config_loader = DBGet::ConfigLoader.new(@dbget_config, @options)
+      else
+        raise "Your dbget.yml is empty!"
+      end
+
       db_dump.load!(config_loader.get_config(db_dump))
     end
 
@@ -45,6 +55,5 @@ module DBGet
         db_dump.clean_up!
       end
     end
-
   end
 end

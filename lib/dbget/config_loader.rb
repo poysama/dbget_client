@@ -11,6 +11,8 @@ module DBGet
 
       if @dbget_config['mapping'].include?(db_dump.db)
         @dbget_config
+      else
+        raise "#{db_dump.db} is not found in your dbget.yml!"
       end
     end
   end

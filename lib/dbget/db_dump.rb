@@ -1,34 +1,26 @@
 module DBGet
   class DBDump
     include Utils
+    include Constants
 
-    DEFAULTS = {
-        :db => "",
-        :date => "",
-        :db_name => "",
-        :filename => "",
-        :key => "",
-        :verbose => false
-      }
+    attr_reader :db, :database, :password
 
-    attr_reader :db, :db_name, :filename, :fullpath, :database, :password
-
-    def initialize(attributes)
-      attributes = DEFAULTS.merge(attributes)
-      @db = attributes[:db]
-      @date = attributes[:date]
-      @db_name = attributes[:db_name]
-      @filename = attributes[:filename]
-      @key = attributes[:key]
-      @dbtype = attributes[:dbtype] || 'mysql'
-      @server = attributes[:server]
-      @opt_db_name = attributes[:opt_db_name]
-      @verbose = attributes[:verbose]
+    def initialize(options)
+      @db = options[:db]
+      @date = options[:date]
+      @key = options[:key]
+      @dbtype = options[:dbtype]
+      @server = options[:server]
+      @opt_db_name = options[:opt_db_name]
+      @verbose = options[:verbose]
+      @append_date = options[:append_date]
+      @clean = options[:clean]
       @header = {}
     end
 
     def load!(db_config)
       @server ||= db_config['source']['server']
+      @key ||= db_config['key']
       @database = @opt_db_name || db_config['mapping'][@db][@dbtype]
       @host = db_config['target'][@dbtype]['host']
       @port = db_config['target'][@dbtype]['port']
@@ -36,21 +28,28 @@ module DBGet
       @password = db_config['target'][@dbtype]['password']
       @dump_path = db_config['source']['dump_path']
       @db_path = File.join(@dump_path, "#{@db}")
-      @clean = db_config[:clean]
+
+      if @append_date
+        @database = @database.concat("_#{@date.delete('-')}")
+      end
 
       get_db_from_server(db_config)
 
       if @header[:status] == 'SUCCESS'
-        puts "Dumping #{@db} to #{@dbtype} using connection: "
-        puts "  host: #{@host}"
-        puts "  port: #{@port}"
-        puts "  user: #{@username}"
-        puts "  database: #{@database}"
+        if !@database.nil?
+          Utils.say "Dump info of #{@db} to #{@dbtype} using connection: \n" +
+          "  host: #{@host}\n" +
+          "  port: #{@port}\n" +
+          "  user: #{@username}\n" +
+          "  database: #{@database}\n"
 
-        if @dbtype == 'mysql'
-          load_mysql!
+          if @dbtype == 'mysql'
+            load_mysql!
+          else
+            load_mongo!
+          end
         else
-          load_mongo!
+          raise "Database #{@db} for #{@dbtype} is not found on #{DBGET_CONFIG_FILE}!"
         end
       else
         raise "There was a problem fetching the database from the server!"
@@ -64,58 +63,79 @@ module DBGet
       command += "-u#{@username} "
       command += "-p#{@password} " if @password
 
-      if @db_config
-        puts "Dropping database..."
-        system "echo \"DROP DATABASE IF EXISTS #{@database}\" | #{command}"
+      if @clean
+        Utils.say_with_time "Dropping database..." do
+          system "echo \"DROP DATABASE IF EXISTS #{@database}\" | #{command}"
+        end
       end
 
       system "echo \"CREATE DATABASE IF NOT EXISTS #{@database}\" | #{command}"
 
       if File.exist?(@db_path) and !File.size?(@db_path).nil?
         command += " #{@database} "
-        system "#{command}< #{File.join(@dump_path, @db)}"
-        puts "Cleaned temporary file" if FileUtils.rm_rf(File.join(@dump_path, @db))
+
+        Utils.say_with_time "Dumping #{db}..." do
+          system "#{command}< #{File.join(@dump_path, @db)}"
+        end
+
+        if FileUtils.rm_rf(File.join(@dump_path, @db))
+          Utils.say "Cleaned temporary file!"
+        end
       else
-        puts "Dump for #{@db} not found!"
+        raise "Dump for #{@db} not found!"
       end
 
-      puts "Done!"
+      Utils.say "Hooray! Dump for #{@db} done!"
     end
 
     def load_mongo!
-      temp_path = File.join(@dump_path, "#{@db}_#{randomize(16)}")
+      temp_path = File.join(@dump_path, "#{@db}_#{Utils.randomize(16)}")
 
       if !File.exists?(temp_path)
         FileUtils.mkdir(temp_path)
-        `#{TAR_CMD} -C #{temp_path} -xf #{File.join(@dump_path, @db)}`
 
-        `#{FIND_CMD} #{temp_path} -name '*.bson'`.each_line do |l|
-          FileUtils.mv(l.chomp!, File.join(temp_path, File.basename(l)))
+        Utils.say_with_time "Extracting archive..." do
+          `#{TAR_CMD} -C #{temp_path} -xf #{File.join(@dump_path, @db)}`
+        end
+
+        Utils.say_with_time "Moving mongo files..." do
+          `#{FIND_CMD} #{temp_path} -name '*.bson'`.each_line do |l|
+              FileUtils.mv(l.chomp!, File.join(temp_path, File.basename(l)))
+          end
         end
       end
 
       Dir["#{temp_path}/*.bson"].each do |d|
         # do not include indexes
         if File.basename(d) != 'system.indexes.bson'
-          if !@verbose
-            `#{MONGORESTORE_CMD} -d #{@database} #{d} --drop`
-          else
-            system "#{MONGORESTORE_CMD} -d #{@database} #{d} --drop"
+          Utils.say_with_time "Dumping #{d}..." do
+            if !@verbose
+              `#{MONGORESTORE_CMD} -d #{@database} #{d} --drop`
+            else
+              system "#{MONGORESTORE_CMD} -d #{@database} #{d} --drop"
+            end
           end
         end
       end
 
-      puts "Dump file removed!" if FileUtils.rm_rf(File.join(@dump_path, @db))
-      puts "Temp directory removed!" if FileUtils.rm_rf(temp_path)
+      Utils.say "Hooray! Dump for #{@db} done!"
+
+      if FileUtils.rm_rf(File.join(@dump_path, @db))
+       Utils.say "Dump file removed!"
+      end
+
+      if FileUtils.rm_rf(temp_path)
+        Utils.say "Temp directory removed!"
+      end
     end
 
     def get_db_from_server(db_config)
       user = db_config['source']['user']
       host = db_config['source']['host']
 
-      FileUtils.mkdir_p(@dump_path) unless File.exist? @dump_path
-
-      puts "Loading data... This may take a while..."
+      unless File.exist? @dump_path
+        FileUtils.mkdir_p(@dump_path)
+      end
 
       ssh_params = "#{user}@#{host} db=#{@db} date=#{@date} " +
                    "dbtype=#{@dbtype} server=#{@server}"

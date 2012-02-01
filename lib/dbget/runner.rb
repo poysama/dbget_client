@@ -1,5 +1,15 @@
 module DBGet
   class Runner
+    def self.boot(args, dbtype)
+      DBGet::Constants.const_set("MYSQL_CMD", `which mysql 2>/dev/null`.strip)
+      DBGet::Constants.const_set("SSH_CMD", `which ssh 2>/dev/null`.strip)
+      DBGet::Constants.const_set("MONGORESTORE_CMD", `which mongorestore 2>/dev/null`.strip)
+      DBGet::Constants.const_set("FIND_CMD", `which find 2>/dev/null`.strip)
+      DBGet::Constants.const_set("TAR_CMD", `which tar 2>/dev/null`.strip)
+
+      self.new(args, dbtype)
+    end
+
     def initialize(args, dbtype)
       options = {}
 
@@ -7,7 +17,7 @@ module DBGet
         opts.banner = "Usage: dbget [options] db1 db2 ...\n"
         opts.separator "Options:"
 
-        opts.on('-d', '--date DATE', 'Date of database dump (mm-dd-yyyy).') do |date|
+        opts.on('-d', '--date DATE', 'Date of database dump (yyyy-mm-dd).') do |date|
           options[:date] = date
         end
 
@@ -24,11 +34,15 @@ module DBGet
         end
 
         opts.on('-i', '--key KEY', 'Specify ssh connection key') do |key|
-          options[:ssh_key] = key
+          options[:key] = key
         end
 
         opts.on('-s', '--server SERVER', 'Specify the server that contained the database.') do |server|
           options[:server] = server
+        end
+
+        opts.on('-a', '--append-date', 'Append the given date as suffix') do
+          options[:append_date] = true
         end
 
         opts.on('-v', '--verbose', 'Execute NERD mode!') do

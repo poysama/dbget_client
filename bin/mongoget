@@ -3,4 +3,4 @@
 DBGET_LIB_PATH = File.join(File.dirname(__FILE__), '../lib')
 require File.join(DBGET_LIB_PATH, 'dbget')
 
-DBGet::Runner.new(ARGV, 'mongo')
+DBGet::Runner.boot(ARGV, 'mongo')
