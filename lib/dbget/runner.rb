@@ -12,6 +12,8 @@ module DBGet
 
     def initialize(args, dbtype)
       options = {}
+      options[:append_date] = false
+      options[:verbose] = false
 
       optparse = OptionParser.new do |opts|
         opts.banner = "Usage: dbget [options] db1 db2 ...\n"
@@ -77,6 +79,17 @@ module DBGet
         opts[:dbget_path] = ENV['DBGET_PATH']
       else
         raise "Cannot find DBGET_PATH!"
+      end
+
+      # lets turn off opt_db_name if we have more arguments
+      # this feature is not supported at the moment
+      if opts[:databases].count > 1 and opts.include?(:opt_db_name)
+        raise "You cannot use -n with multiple databases!"
+      end
+
+      # check if -a switch is give but no -d
+      if opts[:append_date] and !opts.include?(:date)
+        raise "You cannnot use -a without -d!"
       end
 
       DBGet::Initializer.boot(opts)
