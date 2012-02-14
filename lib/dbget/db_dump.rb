@@ -15,6 +15,7 @@ module DBGet
       @verbose = options[:verbose]
       @append_date = options[:append_date]
       @clean = options[:clean]
+      @collections = options[:collections] || []
       @header = {}
     end
 
@@ -33,7 +34,7 @@ module DBGet
         @database = @database.concat("_#{@date.delete('-')}")
       end
 
-      get_db_from_server(db_config)
+      get_dump(db_config)
 
       if @header[:status] == 'SUCCESS'
         if !@database.nil?
@@ -105,9 +106,19 @@ module DBGet
         end
       end
 
-      Dir["#{temp_path}/*.bson"].each do |d|
+      dump_files = Dir["#{temp_path}/*#{MONGO_FILE_EXT}"]
+
+      if !@collections.empty?
+        @collections = @collections.collect do |c|
+          File.join(temp_path, c.concat(MONGO_FILE_EXT))
+        end
+
+        dump_files &= @collections
+      end
+
+      dump_files.each do |d|
         # do not include indexes
-        if File.basename(d) != 'system.indexes.bson'
+        if File.basename(d) != "system.indexes#{MONGO_FILE_EXT}"
           Utils.say_with_time "Dumping #{d}..." do
             if !@verbose
               `#{MONGORESTORE_CMD} -d #{@database} #{d} --drop`
@@ -129,7 +140,7 @@ module DBGet
       end
     end
 
-    def get_db_from_server(db_config)
+    def get_dump(db_config)
       user = db_config['source']['user']
       host = db_config['source']['host']
 
@@ -145,6 +156,8 @@ module DBGet
       else
         ssh_cmd = "#{SSH_CMD} #{ssh_params}"
       end
+
+      Utils.say "Fetching..."
 
       io_handle = IO.popen(ssh_cmd)
 

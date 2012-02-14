@@ -47,6 +47,10 @@ module DBGet
           options[:append_date] = true
         end
 
+        opts.on('--collections COLLECTION', Array, 'Only dump specific mongodb collections separated by comma') do |collection|
+          options[:collections] = collection
+        end
+
         opts.on('-v', '--verbose', 'Execute NERD mode!') do
           options[:verbose] = true
         end
