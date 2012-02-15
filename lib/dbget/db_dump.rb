@@ -3,7 +3,10 @@ module DBGet
     include Utils
     include Constants
 
-    attr_reader :db, :database, :password
+    attr_accessor :dump_path, :collections
+    attr_reader :db, :database, :db_path
+    attr_reader :host, :port, :username, :password
+    attr_reader :clean, :verbose
 
     def initialize(options)
       @db = options[:db]
@@ -45,9 +48,9 @@ module DBGet
           "  database: #{@database}\n"
 
           if @dbtype == 'mysql'
-            load_mysql!
+            Loaders::MySQL.new(self).load!
           else
-            load_mongo!
+            Loaders::MongoDB.new(self).load!
           end
         else
           raise "Database #{@db} for #{@dbtype} is not found on #{DBGET_CONFIG_FILE}!"
@@ -57,88 +60,7 @@ module DBGet
       end
     end
 
-    def load_mysql!
-      command = "#{MYSQL_CMD} "
-      command += "-h#{@host} "
-      command += "-P#{@port} "
-      command += "-u#{@username} "
-      command += "-p#{@password} " if @password
-
-      if @clean
-        Utils.say_with_time "Dropping database..." do
-          system "echo \"DROP DATABASE IF EXISTS #{@database}\" | #{command}"
-        end
-      end
-
-      system "echo \"CREATE DATABASE IF NOT EXISTS #{@database}\" | #{command}"
-
-      if File.exist?(@db_path) and !File.size?(@db_path).nil?
-        command += " #{@database} "
-
-        Utils.say_with_time "Dumping #{db}..." do
-          system "#{command}< #{File.join(@dump_path, @db)}"
-        end
-
-        if FileUtils.rm_rf(File.join(@dump_path, @db))
-          Utils.say "Cleaned temporary file!"
-        end
-      else
-        raise "Dump for #{@db} not found!"
-      end
-
-      Utils.say "Hooray! Dump for #{@db} done!"
-    end
-
-    def load_mongo!
-      temp_path = File.join(@dump_path, "#{@db}_#{Utils.randomize(16)}")
-
-      if !File.exists?(temp_path)
-        FileUtils.mkdir(temp_path)
-
-        Utils.say_with_time "Extracting archive..." do
-          `#{TAR_CMD} -C #{temp_path} -xf #{File.join(@dump_path, @db)}`
-        end
-
-        Utils.say_with_time "Moving mongo files..." do
-          `#{FIND_CMD} #{temp_path} -name '*.bson'`.each_line do |l|
-              FileUtils.mv(l.chomp!, File.join(temp_path, File.basename(l)))
-          end
-        end
-      end
-
-      dump_files = Dir["#{temp_path}/*#{MONGO_FILE_EXT}"]
-
-      if !@collections.empty?
-        @collections = @collections.collect do |c|
-          File.join(temp_path, c.concat(MONGO_FILE_EXT))
-        end
-
-        dump_files &= @collections
-      end
-
-      dump_files.each do |d|
-        # do not include indexes
-        if File.basename(d) != "system.indexes#{MONGO_FILE_EXT}"
-          Utils.say_with_time "Dumping #{d}..." do
-            if !@verbose
-              `#{MONGORESTORE_CMD} -d #{@database} #{d} --drop`
-            else
-              system "#{MONGORESTORE_CMD} -d #{@database} #{d} --drop"
-            end
-          end
-        end
-      end
-
-      Utils.say "Hooray! Dump for #{@db} done!"
-
-      if FileUtils.rm_rf(File.join(@dump_path, @db))
-       Utils.say "Dump file removed!"
-      end
-
-      if FileUtils.rm_rf(temp_path)
-        Utils.say "Temp directory removed!"
-      end
-    end
+    protected
 
     def get_dump(db_config)
       user = db_config['source']['user']
@@ -172,7 +94,6 @@ module DBGet
             f.write(g)
           end
 
-          # read and write the rest of the shit
           f.write(gz.read)
 
           gz.close

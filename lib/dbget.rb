@@ -2,13 +2,16 @@ require 'fileutils'
 require 'yaml'
 require 'zlib'
 require 'optparse'
-require File.join(File.dirname(__FILE__), 'dbget/version')
+
+DBGET_LIB_ROOT = File.expand_path('../dbget', __FILE__)
+require File.join(DBGET_LIB_ROOT, 'version')
 
 module DBGet
-  autoload :Initializer, File.join(File.dirname(__FILE__), 'dbget/initializer')
-  autoload :DBDump, File.join(File.dirname(__FILE__), 'dbget/db_dump')
-  autoload :Constants, File.join(File.dirname(__FILE__), 'dbget/constants')
-  autoload :ConfigLoader, File.join(File.dirname(__FILE__), 'dbget/config_loader')
-  autoload :Runner, File.join(File.dirname(__FILE__), 'dbget/runner')
-  autoload :Utils, File.join(File.dirname(__FILE__), 'dbget/utils')
+  autoload :Initializer, File.join(DBGET_LIB_ROOT, 'initializer')
+  autoload :DBDump, File.join(DBGET_LIB_ROOT, 'db_dump')
+  autoload :Loaders, File.join(DBGET_LIB_ROOT, 'loaders')
+  autoload :Constants, File.join(DBGET_LIB_ROOT, 'constants')
+  autoload :ConfigLoader, File.join(DBGET_LIB_ROOT, 'config_loader')
+  autoload :Runner, File.join(DBGET_LIB_ROOT, 'runner')
+  autoload :Utils, File.join(DBGET_LIB_ROOT, 'utils')
 end
