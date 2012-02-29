@@ -25,8 +25,8 @@ module DBGet
           end
 
           Utils.say_with_time "Moving mongo files..." do
-            `#{FIND_CMD} #{temp_path} -name '*.#{MONGO_FILE_EXT}'`.each_line do |l|
-                FileUtils.mv(l.chomp!, File.join(temp_path, File.basename(l)))
+            `#{FIND_CMD} #{temp_path} -name '*#{MONGO_FILE_EXT}'`.each_line do |l|
+              FileUtils.mv(l.chomp!, File.join(temp_path, File.basename(l)))
             end
           end
         end
