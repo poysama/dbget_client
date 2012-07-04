@@ -19,5 +19,12 @@ module DBGet
       chars = ('a'..'z').to_a + ('A'..'Z').to_a
       (0...size).collect { chars[Kernel.rand(chars.length)] }.join
     end
+
+    def self.stringify(hash)
+      hash.inject({}) do |options, (key, value)|
+        options[key.to_s] = value.to_s
+      options
+      end
+    end
   end
 end
