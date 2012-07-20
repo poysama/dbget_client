@@ -70,13 +70,13 @@ module DBGet
       @optparse.parse!
       @options[:db_type] = type
 
-      dbget
+      controller
     end
 
-    def dbget
+    def controller
       controller = DBGet::Controller.new(@args, @options)
       controller.boot
-      controller.connect
+      controller.send_data!
     end
 
     def has_arguments?

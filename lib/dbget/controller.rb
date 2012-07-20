@@ -22,7 +22,7 @@ module DBGet
       end
     end
 
-    def connect
+    def send_data!
       @connections.each do |connection|
         connection.send_data!
       end
