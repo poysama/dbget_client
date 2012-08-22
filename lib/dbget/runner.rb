@@ -36,6 +36,10 @@ module DBGet
           @options[:collections] = collection
         end
 
+        opts.on('--n', '--name NAME', 'Specify a custom name/key for databases') do |name|
+          @options[:name] = name
+        end
+
         opts.on('-v', '--verbose', 'Execute NERD mode!') do
           @options[:verbose] = true
         end
